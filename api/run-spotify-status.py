@@ -10,11 +10,16 @@ SPOTIFY_URL_REFRESH_TOKEN = "https://accounts.spotify.com/api/token"
 SPOTIFY_URL_NOW_PLAYING = "https://api.spotify.com/v1/me/player/currently-playing"
 SPOTIFY_URL_RECENTLY_PLAY = "https://api.spotify.com/v1/me/player/recently-played?limit=10"
 
-SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
-SPOTIFY_SECRET_ID = os.getenv("SPOTIFY_SECRET_ID")
-SPOTIFY_REFRESH_TOKEN = os.getenv("SPOTIFY_REFRESH_TOKEN")
-SPOTIFY_BAR_COLOR = os.getenv("SPOTIFY_BAR_COLOR")
-SPOTIFY_BADGE_COLOR = os.getenv("SPOTIFY_BADGE_COLOR")
+# SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+# SPOTIFY_SECRET_ID = os.getenv("SPOTIFY_SECRET_ID")
+# SPOTIFY_REFRESH_TOKEN = os.getenv("SPOTIFY_REFRESH_TOKEN")
+# SPOTIFY_BAR_COLOR = os.getenv("SPOTIFY_BAR_COLOR")
+# SPOTIFY_BADGE_COLOR = os.getenv("SPOTIFY_BADGE_COLOR")
+SPOTIFY_CLIENT_ID = "40d472b2748b46be80b7b3591cd29ff2"
+SPOTIFY_SECRET_ID = "7e87d3df90364326836fb3428d253a88"
+SPOTIFY_REFRESH_TOKEN = "AQDlgv3KJtrfhyoAI5h0ibHXsxRSC_V9NO-FcO3j_ukygl_2EEg9kuAWJu1ATwC07TeXtyWtgwCrDQ1NHEkfOcJyPOPbTdiiRZ_3OO5vgUnzv2CzYT5wkfokP9b0tuV9_cE"
+SPOTIFY_BAR_COLOR = "#7003ff"
+SPOTIFY_BADGE_COLOR = "#64c245"
 
 app = Flask(__name__, template_folder="components")
 
@@ -94,20 +99,38 @@ def getSpotifyBadgeColor():
     return default
 
 
-def setSpotifyObject(item):
+def setSpotifyObject(data):
     soundBars = 41
     soundVisualizerBar = "".join(["<div class='spectrograph__bar'></div>" for i in range(soundBars)])
     soundVisualizerCSS = soundVisualizer(soundBars)
-    musicLink = item["album"]["external_urls"]
-    musicTime = convertMsToMin(item["duration_ms"])
-    explicit = item["explicit"]
-    albumCover = loadImageB64(item["album"]["images"][1]["url"])
-    artistName = item["artists"][0]["name"].replace("&", "&amp;")
-    songName = item["name"].replace("&", "&amp;")
     spotifyIcon = loadImageB64("https://storage.googleapis.com/pr-newsroom-wp/1/2018/11/Spotify_Logo_CMYK_White.png")
-    viewAnimation = len(songName) > 27
     spotifyBadgeColor = getSpotifyBadgeColor()
+    musicLink = ""
+    musicTime = 0
+    explicit = ""
+    albumCover = ""
+    artistName = ""
+    songName = ""
+    viewAnimation = 0
+    progress_data = {
+        "progress_ms": 0,
+        "duration_ms": 1,
+        "pause_flag": False
+    }
 
+    if "item" in data:
+        item = data["item"]
+        musicLink = item["album"]["external_urls"]
+        musicTime = convertMsToMin(item["duration_ms"])
+        explicit = item["explicit"]
+        albumCover = loadImageB64(item["album"]["images"][1]["url"])
+        artistName = item["artists"][0]["name"].replace("&", "&amp;")
+        songName = item["name"].replace("&", "&amp;")
+        viewAnimation = len(songName) > 27
+        progress_data["progress_ms"] = data["progress_ms"]
+        progress_data["duration_ms"] = item["duration_ms"]
+        if "pausing" in data["actions"]['disallows']:
+            progress_data["pause_flag"] = data["actions"]['disallows']['pausing']
     spotifyObject = {
         "spotifyBadgeColor": spotifyBadgeColor,
         "spectrographWidth": spectrographWidth(),
@@ -121,27 +144,32 @@ def setSpotifyObject(item):
         "barColor": SPOTIFY_BAR_COLOR,
         "explicit": explicit,
         "musicTime": musicTime,
-        "musicLink": musicLink
+        "musicLink": musicLink,
+        "progress_data": progress_data
     }
     return spotifyObject
 
 
 def makeSVG(data):
-    if data == {}:
-        recent_plays = recentlyPlayed()
-        size_recent_play = len(recent_plays["items"])
-        idx = random.randint(0, size_recent_play - 1)
-        item = recent_plays["items"][idx]["track"]
-    else:
-        item = data["item"]
-
-    spotifyObject = setSpotifyObject(item)
+    # if data == {}:
+    #     recent_plays = recentlyPlayed()
+    #     size_recent_play = len(recent_plays["items"])
+    #     idx = random.randint(0, size_recent_play - 1)
+    #     item = recent_plays["items"][idx]["track"]
+    # else:
+    #     item = data["item"]
+    spotifyObject = setSpotifyObject(data)
 
     return render_template("spotifyStatus.html.j2", **spotifyObject)
 
+# 自定义过滤器 - 格式化时间
+def format_time(value):
+    return "{:02d}:{:02d}".format(value // 60, value % 60)
+
+
 
 @app.route("/", defaults={"path": ""})
-@app.route("/<path:path>")
+# @app.route("/<path:path>")
 def catch_all(path):
     data = nowPlaying()
     svg = makeSVG(data)
@@ -151,6 +179,11 @@ def catch_all(path):
 
     return resp
 
+@app.route('/api/playingData')
+def summary():
+    return nowPlaying()
 
 if __name__ == "__main__":
+    # 将自定义过滤器注册到模板渲染环境中
+    app.jinja_env.filters['format_time'] = format_time
     app.run(debug=True)
