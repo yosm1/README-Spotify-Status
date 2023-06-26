@@ -169,11 +169,6 @@ def makeSVG(data):
     return render_template("spotifyStatus.html.j2", spotifyObject=spotifyObject)
 
 
-# 自定义过滤器 - 格式化时间
-def format_time(value):
-    return "{:02d}:{:02d}".format(value // 60, value % 60)
-
-
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def catch_all(path):
@@ -192,6 +187,4 @@ def summary():
 
 
 if __name__ == "__main__":
-    # 将自定义过滤器注册到模板渲染环境中
-    app.jinja_env.filters['format_time'] = format_time
     app.run(debug=True)

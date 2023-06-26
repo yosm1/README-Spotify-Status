@@ -19,17 +19,17 @@ function updateProgress() {
     let refreshTime = pauseFlag ? 5000 : 1000;
     if (pauseFlag) {
         requestProgress()
-    } else {
+    } else if (songName) {
         let progressElement = document.getElementById('progress');
         let progressTimeElement = document.getElementById('progress-time');
         let progressPercent = (progressMs / durationMs) * 100;
+        let durationTimeElement = document.getElementById('durationTime');
+        durationTimeElement.textContent = formatTime(durationMs);
         progressElement.style.width = progressPercent + '%';
         progressTimeElement.textContent = formatTime(progressMs);
         if (refreshSong) {
             let artistElement = document.getElementById('artist');
             let albumCoverElement = document.getElementById('albumCover');
-            let durationTimeElement = document.getElementById('durationTime');
-            durationTimeElement.textContent = formatTime(durationMs);
             buildSongName(viewAnimation, songName);
             artistElement.textContent = artist;
             albumCoverElement.setAttribute("src", "data:image/png;base64, " + albumCover);
@@ -39,14 +39,14 @@ function updateProgress() {
         // 自动递增进度
         if (progressMs < durationMs) {
             progressMs += 1000;
-            console.log("setTimeout", count, progressMs)
-        }else {
+            // console.log("setTimeout", count, progressMs)
+        } else {
             requestProgress()
-            console.log("nextOne", count, progressMs)
+            // console.log("nextOne", count, progressMs)
         }
         if (count % 15 === 0) {
             requestProgress()
-            console.log("refreshData", count, progressMs)
+            // console.log("refreshData", count, progressMs)
         }
     }
     setTimeout(updateProgress, refreshTime)

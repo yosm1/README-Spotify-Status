@@ -357,11 +357,11 @@
 
                                 <div id = "song-name" style = "width:90%;float:left !important">
                                     {% if spotifyObject.viewAnimation %}
-                                    <div class="song-title-long">
-                                        <p class="title title-animation">
-                                          <span >{{spotifyObject.songName}}</span>
-                                        </p>
-                                    </div>
+                                        <div class="song-title-long">
+                                            <p class="title title-animation">
+                                              <span >{{spotifyObject.songName}}</span>
+                                            </p>
+                                        </div>
                                     {% else %}
                                         <div class="song">
                                             <span >{{spotifyObject.songName}}</span>
@@ -375,7 +375,7 @@
 
                                 <div class="progress-time">
                                     <span id="progress-time" class ="progress-time"></span>
-                                    <span id="durationTime" style ="position:absolute;right:9%;"  class ="progress-time">{{ (spotifyObject.progress_data['duration_ms']/1000)|int|format_time }}</span>
+                                    <span id="durationTime" style ="position:absolute;right:9%;"  class ="progress-time"></span>
                                 </div>
                                 <div id="artist" class="artist">{{spotifyObject.artistName}}
                                 {% if spotifyObject.explicit %}
