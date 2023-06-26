@@ -4,24 +4,26 @@ from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
 
-import requests, json, os, random
+import requests, json, os, random, time
 
 SPOTIFY_URL_REFRESH_TOKEN = "https://accounts.spotify.com/api/token"
 SPOTIFY_URL_NOW_PLAYING = "https://api.spotify.com/v1/me/player/currently-playing"
 SPOTIFY_URL_RECENTLY_PLAY = "https://api.spotify.com/v1/me/player/recently-played?limit=10"
 
-# SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
-# SPOTIFY_SECRET_ID = os.getenv("SPOTIFY_SECRET_ID")
-# SPOTIFY_REFRESH_TOKEN = os.getenv("SPOTIFY_REFRESH_TOKEN")
-# SPOTIFY_BAR_COLOR = os.getenv("SPOTIFY_BAR_COLOR")
-# SPOTIFY_BADGE_COLOR = os.getenv("SPOTIFY_BADGE_COLOR")
-SPOTIFY_CLIENT_ID = "40d472b2748b46be80b7b3591cd29ff2"
-SPOTIFY_SECRET_ID = "7e87d3df90364326836fb3428d253a88"
-SPOTIFY_REFRESH_TOKEN = "AQDlgv3KJtrfhyoAI5h0ibHXsxRSC_V9NO-FcO3j_ukygl_2EEg9kuAWJu1ATwC07TeXtyWtgwCrDQ1NHEkfOcJyPOPbTdiiRZ_3OO5vgUnzv2CzYT5wkfokP9b0tuV9_cE"
-SPOTIFY_BAR_COLOR = "#7003ff"
-SPOTIFY_BADGE_COLOR = "#64c245"
+SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+SPOTIFY_SECRET_ID = os.getenv("SPOTIFY_SECRET_ID")
+SPOTIFY_REFRESH_TOKEN = os.getenv("SPOTIFY_REFRESH_TOKEN")
+SPOTIFY_BAR_COLOR = os.getenv("SPOTIFY_BAR_COLOR")
+SPOTIFY_BADGE_COLOR = os.getenv("SPOTIFY_BADGE_COLOR")
+
 
 app = Flask(__name__, template_folder="components")
+
+access_token_cache = {
+    "access_token": "",
+    "refresh_ms": 1800,
+    "last_update_time": 0
+}
 
 
 def getAuth():
@@ -29,6 +31,8 @@ def getAuth():
 
 
 def refreshToken():
+    if time.time() < access_token_cache["refresh_ms"] + access_token_cache["last_update_time"]:
+        return access_token_cache["access_token"]
     data = {
         "grant_type": "refresh_token",
         "refresh_token": SPOTIFY_REFRESH_TOKEN,
@@ -37,7 +41,9 @@ def refreshToken():
     headers = {"Authorization": "Basic {}".format(getAuth())}
 
     response = requests.post(SPOTIFY_URL_REFRESH_TOKEN, data=data, headers=headers)
-    return response.json()["access_token"]
+    access_token_cache["access_token"] = response.json()["access_token"]
+    access_token_cache["last_update_time"] = time.time()
+    return access_token_cache["access_token"]
 
 
 def recentlyPlayed():
@@ -160,16 +166,16 @@ def makeSVG(data):
     #     item = data["item"]
     spotifyObject = setSpotifyObject(data)
 
-    return render_template("spotifyStatus.html.j2", **spotifyObject)
+    return render_template("spotifyStatus.html.j2", spotifyObject=spotifyObject)
+
 
 # 自定义过滤器 - 格式化时间
 def format_time(value):
     return "{:02d}:{:02d}".format(value // 60, value % 60)
 
 
-
 @app.route("/", defaults={"path": ""})
-# @app.route("/<path:path>")
+@app.route("/<path:path>")
 def catch_all(path):
     data = nowPlaying()
     svg = makeSVG(data)
@@ -179,9 +185,11 @@ def catch_all(path):
 
     return resp
 
+
 @app.route('/api/playingData')
 def summary():
-    return nowPlaying()
+    return setSpotifyObject(nowPlaying())
+
 
 if __name__ == "__main__":
     # 将自定义过滤器注册到模板渲染环境中
